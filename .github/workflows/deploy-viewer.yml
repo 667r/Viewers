@@ -1,0 +1,55 @@
+name: Deploy OHIF Viewer to GitHub Pages
+
+on:
+  push:
+    branches: [master] # Se ejecuta automáticamente al hacer push o merge a master
+
+# Permisos necesarios para escribir en la rama gh-pages
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-viewer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.23
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Instalamos de manera global la versión exacta de yarn que pide tu config
+      - name: Instalar Yarn globalmente
+        run: npm install -g yarn@1.22.22
+
+      - name: Instalar dependencias raíz
+        run: bun install --frozen-lockfile
+
+      - name: Construir OHIF Viewer para producción
+        run: bun run build:ci
+        env:
+          PUBLIC_URL: /Viewers/ # CRÍTICO: Debe coincidir exactamente con el nombre de tu repo en GitHub
+
+      - name: Duplicar index.html como 404.html para el ruteo de la SPA
+        run: cp platform/app/dist/index.html platform/app/dist/404.html
+
+      # Desplegamos la carpeta compilada a la rama gh-pages
+      - name: Desplegar a GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: platform/app/dist # Carpeta de salida estándar de OHIF
+          branch: gh-pages
+          clean: true

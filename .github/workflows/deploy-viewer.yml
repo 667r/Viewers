@@ -2,11 +2,13 @@ name: Deploy OHIF Viewer to GitHub Pages
 
 on:
   push:
-    branches: [master] # Se ejecuta automáticamente al hacer push o merge a master
+    branches: [master]
 
-# Permisos necesarios para escribir en la rama gh-pages
+# Permisos requeridos para interactuar directamente con la API de GitHub Pages
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: deploy-viewer-${{ github.ref }}
@@ -14,6 +16,9 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -31,7 +36,6 @@ jobs:
         with:
           node-version: 20
 
-      # Instalamos de manera global la versión exacta de yarn que pide tu config
       - name: Instalar Yarn globalmente
         run: npm install -g yarn@1.22.22
 
@@ -41,15 +45,20 @@ jobs:
       - name: Construir OHIF Viewer para producción
         run: bun run build:ci
         env:
-          PUBLIC_URL: /Viewers/ # CRÍTICO: Debe coincidir exactamente con el nombre de tu repo en GitHub
+          PUBLIC_URL: /Viewers/
 
       - name: Duplicar index.html como 404.html para el ruteo de la SPA
         run: cp platform/app/dist/index.html platform/app/dist/404.html
 
-      # Desplegamos la carpeta compilada a la rama gh-pages
-      - name: Desplegar a GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      # ── NUEVOS PASOS: Subir y Desplegar el Artifact oficial de GitHub ──
+      - name: Configurar Pages estático
+        uses: actions/configure-pages@v5
+
+      - name: Subir el build como artefacto de Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: platform/app/dist # Carpeta de salida estándar de OHIF
-          branch: gh-pages
-          clean: true
+          path: platform/app/dist
+
+      - name: Desplegar en GitHub Pages directamente
+        id: deployment
+        uses: actions/deploy-pages@v4

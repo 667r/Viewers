@@ -3,7 +3,7 @@ name: Deploy OHIF Viewer to GitHub Pages
 on:
   push:
     branches:
-      - mrLiverSegmentation
+      - mrliverSegmentation
 
 permissions:
   contents: read

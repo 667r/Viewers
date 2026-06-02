@@ -2,10 +2,13 @@ name: Deploy OHIF Viewer to GitHub Pages
 
 on:
   push:
-    branches: [mrLiverSegmentation]
+    branches: [mrLiverSegmentation] # Se activa con tus cambios de segmentación hepática
 
+# Permisos requeridos para interactuar directamente con la API de GitHub Pages sin usar ramas intermedias
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: deploy-viewer-${{ github.ref }}
@@ -13,12 +16,17 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
+        with:
+          submodules: true # Mantiene el comportamiento de clonar submódulos que vi en tu log
 
       - name: Configurar Bun
         uses: oven-sh/setup-bun@v2
@@ -44,12 +52,15 @@ jobs:
       - name: Duplicar index.html como 404.html para el ruteo de la SPA
         run: cp platform/app/dist/index.html platform/app/dist/404.html
 
-      - name: Crear archivo .nojekyll
-        run: touch platform/app/dist/.nojekyll
+      # ── Configuración y despliegue directo usando la API de GitHub Pages ──
+      - name: Configurar Pages estático
+        uses: actions/configure-pages@v5
 
-      - name: Desplegar a GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Subir el build como artefacto de Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          folder: platform/app/dist
-          branch: gh-pages # 🚀 Subirá los archivos compilados a esta rama independiente
-          clean: true
+          path: platform/app/dist
+
+      - name: Desplegar en GitHub Pages directamente
+        id: deployment
+        uses: actions/deploy-pages@v4

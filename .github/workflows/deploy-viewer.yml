@@ -2,9 +2,9 @@ name: Deploy OHIF Viewer to GitHub Pages
 
 on:
   push:
-    branches: [mrLiverSegmentation] # Se activa con tus cambios de segmentación hepática
+    branches:
+      - mrLiverSegmentation
 
-# Permisos requeridos para interactuar directamente con la API de GitHub Pages sin usar ramas intermedias
 permissions:
   contents: read
   pages: write
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
         with:
-          submodules: true # Mantiene el comportamiento de clonar submódulos que vi en tu log
+          submodules: true
 
       - name: Configurar Bun
         uses: oven-sh/setup-bun@v2
@@ -52,7 +52,6 @@ jobs:
       - name: Duplicar index.html como 404.html para el ruteo de la SPA
         run: cp platform/app/dist/index.html platform/app/dist/404.html
 
-      # ── Configuración y despliegue directo usando la API de GitHub Pages ──
       - name: Configurar Pages estático
         uses: actions/configure-pages@v5
 
